@@ -6,17 +6,20 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.Locale;
 
 public class TextSpeech extends AppCompatActivity {
 
+    private static final int SUCCESS = 0;
     private TextToSpeech mTTS;
     private EditText mEditText, mFileName;
     private SeekBar mSeekBarPitch;
@@ -49,6 +52,8 @@ public class TextSpeech extends AppCompatActivity {
 
         });
 
+
+
         mEditText = findViewById(R.id.edit_text);
         mFileName = findViewById(R.id.file_name);
         mSeekBarPitch = findViewById(R.id.seek_bar_pitch);
@@ -57,12 +62,12 @@ public class TextSpeech extends AppCompatActivity {
         mButtonSpeak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                speak();
+                convert();
             }
         });
     }
 
-    private void speak() {
+    private void convert() {
         String text = mEditText.getText().toString();
         String filename = mFileName.getText().toString();
         float pitch = (float) mSeekBarPitch.getProgress() / 50;
@@ -74,35 +79,66 @@ public class TextSpeech extends AppCompatActivity {
         mTTS.setSpeechRate(speed);
 
 //        mTTS.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            String state = Environment.getExternalStorageState();
-            boolean mExternalStorageWriteable = false;
-            boolean mExternalStorageAvailable = false;
-            if (Environment.MEDIA_MOUNTED.equals(state)) {
-                // Can read and write the media
-                mExternalStorageAvailable = mExternalStorageWriteable = true;
+        if (!text.equals("") && !filename.equals("")) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                String state = Environment.getExternalStorageState();
+                boolean mExternalStorageWriteable = false;
+                boolean mExternalStorageAvailable = false;
+                if (Environment.MEDIA_MOUNTED.equals(state)) {
+                    // Can read and write the media
+                    mExternalStorageAvailable = mExternalStorageWriteable = true;
 
-            } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
-                // Can only read the media
-                mExternalStorageAvailable = true;
-                mExternalStorageWriteable = false;
-            } else {
-                // Can't read or write
-                mExternalStorageAvailable = mExternalStorageWriteable = false;
-            }
-            File root = android.os.Environment.getExternalStorageDirectory();
-            File dir = new File(root.getAbsolutePath() + "/TextToSpeech");
-            dir.mkdirs();
-            File file = new File(dir, filename +".mp3");
-            int i = mTTS.synthesizeToFile((CharSequence) text, null, file,
-                    "tts");
-            if (i > 0){
-                Log.e("TTS", ""+ i);
-            }
+                } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+                    // Can only read the media
+                    mExternalStorageAvailable = true;
+                    mExternalStorageWriteable = false;
+                } else {
+                    // Can't read or write
+                    mExternalStorageAvailable = mExternalStorageWriteable = false;
+                }
+                File root = android.os.Environment.getExternalStorageDirectory();
+                File dir = new File(root.getAbsolutePath() + "/TextToSpeech");
+                dir.mkdirs();
+                File file = new File(dir, filename + ".mp3");
+
+                int i = mTTS.synthesizeToFile((CharSequence) text, null, file,
+                        "tts");
+
+
+                mTTS.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override
+                    public void onStart(String s) {
+
+                        Toast.makeText(TextSpeech.this, "Text Conversion started", Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    public void onDone(String s) {
+                        mEditText.setText("");
+                        mFileName.setText("");
+                        Toast.makeText(TextSpeech.this, "Text Converted Successfully", Toast.LENGTH_SHORT).show();
+
+                    }
+
+                    @Override
+                    public void onError(String s) {
+
+                    }
+                });
+
+
+//                if (i == SUCCESS) {
+//                    Toast.makeText(this, "Text Converted Successfully", Toast.LENGTH_SHORT).show();
+//                    mEditText.setText("");
+//                    mFileName.setText("");
+//                    mTTS.shutdown();
+//                } else {
+//                    Toast.makeText(this, "Please try again", Toast.LENGTH_SHORT).show();
+//                    i = 1;
+//                }
 //            mTTS.speak(text,TextToSpeech.QUEUE_FLUSH,null,null);
-        } else {
-            mTTS.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-        }
+            }
+        }else Toast.makeText(this, "Please enter File name and text", Toast.LENGTH_SHORT).show();
     }
 
 
